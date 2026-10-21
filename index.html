@@ -132,13 +132,15 @@
     <h2 class="centre">Leave a review</h2>
     <p class="centre muted">Visited us recently? Share your experience below — it shows on this device straight away.</p>
     <form id="reviewForm" class="card form">
-      <label>Your name<input required name="name" placeholder="e.g. Amina K."></label>
+      <label>Your name<input required name="name" placeholder="e.g. Raj Patel"></label>
+      <label>City / Area<input required name="area" placeholder="e.g. London, UK"></label>
       <label>Visa country
         <select name="country"><option>France</option><option>Spain</option><option>Italy</option><option>Greece</option><option>Netherlands</option><option>Germany</option><option>Other</option></select>
       </label>
       <label>Your rating
         <select name="rating"><option value="5">★★★★★ — Excellent</option><option value="4">★★★★ — Very good</option><option value="3">★★★ — Good</option></select>
       </label>
+      <label>Short title<input required name="title" placeholder="e.g. Excellent support"></label>
       <label class="full">Your review<textarea required name="text" rows="4" placeholder="How was your appointment booking and document check?"></textarea></label>
       <button class="btn btn-gold" type="submit">Submit Review</button>
       <p class="muted full" id="formMsg" role="status"></p>

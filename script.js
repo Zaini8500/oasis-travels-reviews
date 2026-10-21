@@ -25,20 +25,20 @@ function stars(n){return '★'.repeat(n)+'☆'.repeat(5-n)}
 function card(r){
   const el=document.createElement('article'); el.className='card review'; el.dataset.country=r.country;
   el.innerHTML=`<header><div class="avatar">${r.name.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase()}</div><div><h3>${r.name}</h3><div class="meta">${r.area} · ${r.date}</div></div></header>
-  <div class="stars" style="font-size:17px">${stars(r.rating)}</div><span class="tag">${r.country} visa</span>${r.real?'<span class="sample real-badge">On oasistravels.co.uk</span>':(r.client?'':'<span class="sample">Sample</span>')}
+  <div class="stars" style="font-size:17px">${stars(r.rating)}</div><span class="tag">${r.country} visa</span>${r.real?'<span class="sample real-badge">On oasistravels.co.uk</span>':((r.client||r.submitted)?'':'<span class="sample">Sample</span>')}
   <h3>${r.title}</h3><p>${r.text}</p>${adminMode?`<br><button class="adminDel" style="margin-top:8px;padding:6px 12px;cursor:pointer">Delete this review</button> <button class="adminEdit" style="margin-top:8px;padding:6px 12px;cursor:pointer">Edit this review</button>`:''}`;
   if(adminMode){ const okey=r._okey||r.name+'|'+r.title; el.querySelector('.adminDel').addEventListener('click',()=>{ const h=new Set(JSON.parse(localStorage.getItem('oasisHidden')||'[]')); h.add(okey); localStorage.setItem('oasisHidden',JSON.stringify([...h])); const s=JSON.parse(localStorage.getItem('oasisReviews')||'[]').filter(x=>(x.name+'|'+x.title)!==okey); localStorage.setItem('oasisReviews',JSON.stringify(s)); render(); }); el.querySelector('.adminEdit').addEventListener('click',()=>openEditPanel(r)); }
   return el;
 }
 let adminMode=false;
 function getEdits(){ try{return JSON.parse(localStorage.getItem('oasisEdits')||'{}')}catch(e){return {}} }
-function render(filter='all'){ const hidden=new Set(JSON.parse(localStorage.getItem('oasisHidden')||'[]')); const edits=getEdits(); grid.innerHTML=''; REAL_REVIEWS.concat(CLIENT_REVIEWS).concat(JSON.parse(localStorage.getItem('oasisReviews')||'[]')).forEach(orig=>{ const okey=orig.name+'|'+orig.title; if(hidden.has(okey)) return; const r={...orig, ...(edits[okey]||{}), real:orig.real, client:orig.client, _okey:okey}; if(filter!=='all'&&r.country!==filter) return; grid.appendChild(card(r)); }); }
+function render(filter='all'){ const hidden=new Set(JSON.parse(localStorage.getItem('oasisHidden')||'[]')); const edits=getEdits(); grid.innerHTML=''; REAL_REVIEWS.concat(CLIENT_REVIEWS).concat(JSON.parse(localStorage.getItem('oasisReviews')||'[]').map(r=>({...r, submitted:true}))).forEach(orig=>{ const okey=orig.name+'|'+orig.title; if(hidden.has(okey)) return; const r={...orig, ...(edits[okey]||{}), real:orig.real, client:orig.client, _okey:okey}; if(filter!=='all'&&r.country!==filter) return; grid.appendChild(card(r)); }); }
 render();
 document.querySelectorAll('.chip').forEach(c=>c.addEventListener('click',()=>{document.querySelectorAll('.chip').forEach(x=>x.classList.remove('active'));c.classList.add('active');render(c.dataset.filter)}));
 document.getElementById('countryChips').innerHTML = COUNTRIES.map(c=>`<span>${c}</span>`).join('');
 document.getElementById('reviewForm').addEventListener('submit',e=>{
   e.preventDefault(); const f=new FormData(e.target);
-  const r={name:f.get('name'), area:'Client review', country:f.get('country'), rating:+f.get('rating'), date:'Just now', title:'Client review', text:f.get('text')};
+  const r={name:f.get('name'), area:(f.get('area')||'').trim()||'Client review', country:f.get('country'), rating:+f.get('rating'), date:'Just now', title:(f.get('title')||'').trim()||'Client review', text:f.get('text'), submitted:true};
   const saved=JSON.parse(localStorage.getItem('oasisReviews')||'[]'); saved.unshift(r); localStorage.setItem('oasisReviews',JSON.stringify(saved));
   render(); e.target.reset();
   const waText=encodeURIComponent(`New review for Oasis Travels\nName: ${r.name}\nVisa country: ${r.country}\nRating: ${r.rating}/5\nReview: ${r.text}`);
