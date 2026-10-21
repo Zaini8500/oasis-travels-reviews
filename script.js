@@ -35,6 +35,8 @@ document.getElementById('reviewForm').addEventListener('submit',e=>{
   e.preventDefault(); const f=new FormData(e.target);
   const r={name:f.get('name'), area:'Client review', country:f.get('country'), rating:+f.get('rating'), date:'Just now', title:'Client review', text:f.get('text')};
   const saved=JSON.parse(localStorage.getItem('oasisReviews')||'[]'); saved.unshift(r); localStorage.setItem('oasisReviews',JSON.stringify(saved));
-  render(); e.target.reset(); document.getElementById('formMsg').textContent='Thank you — your review now shows above on this device.';
+  render(); e.target.reset();
+  const waText=encodeURIComponent(`New review for Oasis Travels\nName: ${r.name}\nVisa country: ${r.country}\nRating: ${r.rating}/5\nReview: ${r.text}`);
+  document.getElementById('formMsg').innerHTML=`Thank you — your review now shows above on this device.<br><br><a class="btn btn-gold" target="_blank" rel="noopener" style="text-decoration:none" href="https://wa.me/447474795028?text=${waText}">Send this review to us on WhatsApp</a><br><br><span>Send it to us and we will add it to the public reviews page.</span>`;
   document.getElementById('reviews').scrollIntoView({behavior:'smooth'});
 });
