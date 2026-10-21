@@ -25,12 +25,13 @@ function card(r){
   const el=document.createElement('article'); el.className='card review'; el.dataset.country=r.country;
   el.innerHTML=`<header><div class="avatar">${r.name.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase()}</div><div><h3>${r.name}</h3><div class="meta">${r.area} · ${r.date}</div></div></header>
   <div class="stars" style="font-size:17px">${stars(r.rating)}</div><span class="tag">${r.country} visa</span>${r.real?'<span class="sample real-badge">On oasistravels.co.uk</span>':'<span class="sample">Sample</span>'}
-  <h3>${r.title}</h3><p>${r.text}</p>${adminMode?`<br><button class="adminDel" style="margin-top:8px;padding:6px 12px;cursor:pointer">Delete this review</button>`:''}`;
-  if(adminMode){ el.querySelector('.adminDel').addEventListener('click',()=>{ const h=new Set(JSON.parse(localStorage.getItem('oasisHidden')||'[]')); h.add(r.name+'|'+r.title); localStorage.setItem('oasisHidden',JSON.stringify([...h])); const s=JSON.parse(localStorage.getItem('oasisReviews')||'[]').filter(x=>(x.name+'|'+x.title)!==(r.name+'|'+r.title)); localStorage.setItem('oasisReviews',JSON.stringify(s)); render(); }); }
+  <h3>${r.title}</h3><p>${r.text}</p>${adminMode?`<br><button class="adminDel" style="margin-top:8px;padding:6px 12px;cursor:pointer">Delete this review</button> <button class="adminEdit" style="margin-top:8px;padding:6px 12px;cursor:pointer">Edit this review</button>`:''}`;
+  if(adminMode){ const okey=r._okey||r.name+'|'+r.title; el.querySelector('.adminDel').addEventListener('click',()=>{ const h=new Set(JSON.parse(localStorage.getItem('oasisHidden')||'[]')); h.add(okey); localStorage.setItem('oasisHidden',JSON.stringify([...h])); const s=JSON.parse(localStorage.getItem('oasisReviews')||'[]').filter(x=>(x.name+'|'+x.title)!==okey); localStorage.setItem('oasisReviews',JSON.stringify(s)); render(); }); el.querySelector('.adminEdit').addEventListener('click',()=>openEditPanel(r)); }
   return el;
 }
 let adminMode=false;
-function render(filter='all'){ const hidden=new Set(JSON.parse(localStorage.getItem('oasisHidden')||'[]')); grid.innerHTML=''; REAL_REVIEWS.concat(SAMPLE_REVIEWS).concat(JSON.parse(localStorage.getItem('oasisReviews')||'[]')).filter(r=>!hidden.has(r.name+'|'+r.title)).filter(r=>filter==='all'||r.country===filter).forEach(r=>grid.appendChild(card(r))); }
+function getEdits(){ try{return JSON.parse(localStorage.getItem('oasisEdits')||'{}')}catch(e){return {}} }
+function render(filter='all'){ const hidden=new Set(JSON.parse(localStorage.getItem('oasisHidden')||'[]')); const edits=getEdits(); grid.innerHTML=''; REAL_REVIEWS.concat(SAMPLE_REVIEWS).concat(JSON.parse(localStorage.getItem('oasisReviews')||'[]')).forEach(orig=>{ const okey=orig.name+'|'+orig.title; if(hidden.has(okey)) return; const r={...orig, ...(edits[okey]||{}), real:orig.real, _okey:okey}; if(filter!=='all'&&r.country!==filter) return; grid.appendChild(card(r)); }); }
 render();
 document.querySelectorAll('.chip').forEach(c=>c.addEventListener('click',()=>{document.querySelectorAll('.chip').forEach(x=>x.classList.remove('active'));c.classList.add('active');render(c.dataset.filter)}));
 document.getElementById('countryChips').innerHTML = COUNTRIES.map(c=>`<span>${c}</span>`).join('');
@@ -45,9 +46,10 @@ document.getElementById('reviewForm').addEventListener('submit',e=>{
 });
 
 // SECRET ADMIN: press Ctrl+D (or Cmd+D on Mac) to open the admin panel.
-// Enter the secret key to show a Delete button on every review card.
-// Deleting removes that review on the device used (saved in localStorage).
-// To remove a review for every visitor, ask Muse to delete it from this file.
+// Enter the secret key to show Delete and Edit buttons on every review card.
+// Deleting and editing only affect the device used (saved in localStorage).
+// Sample reviews always stay labelled Sample, even after editing.
+// To change a review for every visitor, ask Muse to change it in this file.
 const ADMIN_KEY='oasis-admin';
 document.addEventListener('keydown',e=>{
   if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='d'){ e.preventDefault(); openAdminPanel(); }
@@ -61,9 +63,32 @@ function openAdminPanel(){
     document.body.appendChild(p);
     p.querySelector('#adminCancel').addEventListener('click',()=>p.remove());
     p.querySelector('#adminGo').addEventListener('click',()=>{
-      if(p.querySelector('#adminKey').value===ADMIN_KEY){ adminMode=true; p.remove(); render(); alert('Admin mode on: every review now has a Delete button. Deleting removes it on this device.'); }
+      if(p.querySelector('#adminKey').value===ADMIN_KEY){ adminMode=true; p.remove(); render(); alert('Admin mode on: every review now has Delete and Edit buttons. Changes only affect this device. Sample reviews stay labelled Sample.'); }
       else p.querySelector('#adminMsg').textContent='Wrong key.';
     });
   }
   p.style.display='block';
+}
+
+function openEditPanel(r){
+  let p=document.getElementById('editPanel');
+  if(p) p.remove();
+  p=document.createElement('div'); p.id='editPanel';
+  p.style.cssText='position:fixed;top:20px;left:20px;right:20px;z-index:9999;background:#111;color:#fff;padding:16px;border-radius:10px;max-width:340px;font-family:sans-serif';
+  const esc=s=>String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;');
+  p.innerHTML='<b>Edit review</b><p style="margin:8px 0;font-size:13px">Edits save on this device only. Sample reviews stay labelled Sample.</p>'
+    +'<label style="font-size:13px">Name<br><input id="eName" style="width:100%;padding:8px;margin-bottom:8px;box-sizing:border-box" value="'+esc(r.name)+'"></label><br>'
+    +'<label style="font-size:13px">Visa country<br><input id="eCountry" style="width:100%;padding:8px;margin-bottom:8px;box-sizing:border-box" value="'+esc(r.country)+'"></label><br>'
+    +'<label style="font-size:13px">Title<br><input id="eTitle" style="width:100%;padding:8px;margin-bottom:8px;box-sizing:border-box" value="'+esc(r.title)+'"></label><br>'
+    +'<label style="font-size:13px">Stars (1-5)<br><input id="eRating" type="number" min="1" max="5" style="width:100%;padding:8px;margin-bottom:8px;box-sizing:border-box" value="'+r.rating+'"></label><br>'
+    +'<label style="font-size:13px">Review text<br><textarea id="eText" rows="4" style="width:100%;padding:8px;margin-bottom:8px;box-sizing:border-box">'+esc(r.text)+'</textarea></label><br>'
+    +'<button id="eSave" style="padding:6px 12px;cursor:pointer">Save</button> <button id="eCancel" style="padding:6px 12px;cursor:pointer">Cancel</button>';
+  document.body.appendChild(p);
+  p.querySelector('#eCancel').addEventListener('click',()=>p.remove());
+  p.querySelector('#eSave').addEventListener('click',()=>{
+    const edits=getEdits(); const okey=r._okey||r.name+'|'+r.title;
+    let st=+p.querySelector('#eRating').value; if(!(st>=1&&st<=5)) st=r.rating;
+    edits[okey]={name:p.querySelector('#eName').value.trim()||r.name, country:p.querySelector('#eCountry').value.trim()||r.country, title:p.querySelector('#eTitle').value.trim()||r.title, rating:st, text:p.querySelector('#eText').value.trim()||r.text};
+    localStorage.setItem('oasisEdits',JSON.stringify(edits)); p.remove(); render();
+  });
 }
