@@ -25,9 +25,12 @@ function card(r){
   const el=document.createElement('article'); el.className='card review'; el.dataset.country=r.country;
   el.innerHTML=`<header><div class="avatar">${r.name.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase()}</div><div><h3>${r.name}</h3><div class="meta">${r.area} · ${r.date}</div></div></header>
   <div class="stars" style="font-size:17px">${stars(r.rating)}</div><span class="tag">${r.country} visa</span>${r.real?'<span class="sample real-badge">On oasistravels.co.uk</span>':'<span class="sample">Sample</span>'}
-  <h3>${r.title}</h3><p>${r.text}</p>`; return el;
+  <h3>${r.title}</h3><p>${r.text}</p>${adminMode?`<br><button class="adminDel" style="margin-top:8px;padding:6px 12px;cursor:pointer">Delete this review</button>`:''}`;
+  if(adminMode){ el.querySelector('.adminDel').addEventListener('click',()=>{ const h=new Set(JSON.parse(localStorage.getItem('oasisHidden')||'[]')); h.add(r.name+'|'+r.title); localStorage.setItem('oasisHidden',JSON.stringify([...h])); const s=JSON.parse(localStorage.getItem('oasisReviews')||'[]').filter(x=>(x.name+'|'+x.title)!==(r.name+'|'+r.title)); localStorage.setItem('oasisReviews',JSON.stringify(s)); render(); }); }
+  return el;
 }
-function render(filter='all'){ grid.innerHTML=''; REAL_REVIEWS.concat(SAMPLE_REVIEWS).concat(JSON.parse(localStorage.getItem('oasisReviews')||'[]')).filter(r=>filter==='all'||r.country===filter).forEach(r=>grid.appendChild(card(r))); }
+let adminMode=false;
+function render(filter='all'){ const hidden=new Set(JSON.parse(localStorage.getItem('oasisHidden')||'[]')); grid.innerHTML=''; REAL_REVIEWS.concat(SAMPLE_REVIEWS).concat(JSON.parse(localStorage.getItem('oasisReviews')||'[]')).filter(r=>!hidden.has(r.name+'|'+r.title)).filter(r=>filter==='all'||r.country===filter).forEach(r=>grid.appendChild(card(r))); }
 render();
 document.querySelectorAll('.chip').forEach(c=>c.addEventListener('click',()=>{document.querySelectorAll('.chip').forEach(x=>x.classList.remove('active'));c.classList.add('active');render(c.dataset.filter)}));
 document.getElementById('countryChips').innerHTML = COUNTRIES.map(c=>`<span>${c}</span>`).join('');
@@ -40,3 +43,27 @@ document.getElementById('reviewForm').addEventListener('submit',e=>{
   document.getElementById('formMsg').innerHTML=`Thank you — your review now shows above on this device.<br><br><a class="btn btn-gold" target="_blank" rel="noopener" style="text-decoration:none" href="https://wa.me/447474795028?text=${waText}">Send this review to us on WhatsApp</a><br><br><span>Send it to us and we will add it to the public reviews page.</span>`;
   document.getElementById('reviews').scrollIntoView({behavior:'smooth'});
 });
+
+// SECRET ADMIN: press Ctrl+D (or Cmd+D on Mac) to open the admin panel.
+// Enter the secret key to show a Delete button on every review card.
+// Deleting removes that review on the device used (saved in localStorage).
+// To remove a review for every visitor, ask Muse to delete it from this file.
+const ADMIN_KEY='oasis-admin';
+document.addEventListener('keydown',e=>{
+  if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='d'){ e.preventDefault(); openAdminPanel(); }
+});
+function openAdminPanel(){
+  let p=document.getElementById('adminPanel');
+  if(!p){
+    p=document.createElement('div'); p.id='adminPanel';
+    p.style.cssText='position:fixed;top:20px;right:20px;z-index:9999;background:#111;color:#fff;padding:16px;border-radius:10px;max-width:280px;font-family:sans-serif';
+    p.innerHTML='<b>Admin</b><p style="margin:8px 0">Enter the secret key to manage reviews.</p><input id="adminKey" type="password" style="width:100%;padding:8px;margin-bottom:8px;box-sizing:border-box"><br><button id="adminGo" style="padding:6px 12px;cursor:pointer">Unlock</button> <button id="adminCancel" style="padding:6px 12px;cursor:pointer">Cancel</button><p id="adminMsg" style="margin:8px 0 0"></p>';
+    document.body.appendChild(p);
+    p.querySelector('#adminCancel').addEventListener('click',()=>p.remove());
+    p.querySelector('#adminGo').addEventListener('click',()=>{
+      if(p.querySelector('#adminKey').value===ADMIN_KEY){ adminMode=true; p.remove(); render(); alert('Admin mode on: every review now has a Delete button. Deleting removes it on this device.'); }
+      else p.querySelector('#adminMsg').textContent='Wrong key.';
+    });
+  }
+  p.style.display='block';
+}
